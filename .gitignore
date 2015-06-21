@@ -1,0 +1,17 @@
+*~
+.hsenv
+dist
+*.hi
+*.o
+*.swp
+*.tag
+*~
+.hsenv
+/.cabal-sandbox/
+/target/
+TAGS
+cabal-dev/
+cabal.sandbox.config
+dist-stack/
+dist/
+tags

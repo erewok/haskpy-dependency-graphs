@@ -20,8 +20,7 @@
 --               z
 module DependencyGraph.ImportLine (
   Importer(..),
-  imports,
-  importline
+  imports
   ) where
 
 import Control.Applicative
@@ -30,18 +29,6 @@ import Data.String
 
 import Prelude
 import qualified Text.ParserCombinators.Parsec as P hiding ((<|>))
-
-importline = unlines ["import copy",
-                      "import json",
-                      "import collections",
-                      "from .toolbox import backfill_append",
-                      "from .toolbox import new_json_from_path",
-                      "from ..toolbox.collections.tools import tool",
-                      "",
-                      "from exceptions import BadPath",
-                      "from exceptions import BadPath as bp",
-                      "from ..exceptions import EmptyPath",
-                      "from ..exceptions import EmptyPath as bp, goodPath"]
 
 data Importer =
   Whitespace

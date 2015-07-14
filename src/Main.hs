@@ -1,7 +1,16 @@
 module Main where
 
-import DependencyGraph()
+import Control.Monad
+import Data.List.Split
+import Prelude
+import System.Environment
+
+import qualified DependencyGraph as DG
 
 main :: IO ()
 main = do
-  undefined
+  (pyvers:infile:[]) <- getArgs
+  pypath <- getEnv "PYTHONPATH"
+  let env = DG.Environment pyvers (splitOn ":" pypath)
+  modules <- DG.findAllModules env infile
+  mapM_ putStrLn modules

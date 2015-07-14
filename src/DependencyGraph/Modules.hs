@@ -5,16 +5,24 @@
 -- to define application imports.
 
 module DependencyGraph.Modules (
+  Environment(..),
   getImports,
   getPath,
   dotsToPath,
   initialImportPaths,
   getRealPath,
-  getRealPaths
+  getRealPaths,
+  locateModule,
+  locateModules,
+  filter3rdPartyStdLibPaths,
+  findAllModules
   ) where
 
 import Control.Applicative
 import Control.Monad
+import Control.Monad.Trans
+--import Control.Monad.Reader
+import Control.Monad.Trans.Reader
 import Control.Monad.IO.Class
 import Data.List
 import Data.List.Split
@@ -25,16 +33,28 @@ import System.Directory
 import qualified DependencyGraph.ImportLine as I
 import qualified Text.ParserCombinators.Parsec as P
 
-testpythonpath :: [String]
-testpythonpath = [""
-            , "/opt/boxen/homebrew/Cellar/python3/3.4.2_1/Frameworks/Python.framework/Versions/3.4/lib/python34.zip"
-            , "/opt/boxen/homebrew/Cellar/python3/3.4.2_1/Frameworks/Python.framework/Versions/3.4/lib/python3.4"
-            , "/opt/boxen/homebrew/Cellar/python3/3.4.2_1/Frameworks/Python.framework/Versions/3.4/lib/python3.4/plat-darwin"
-            , "/opt/boxen/homebrew/Cellar/python3/3.4.2_1/Frameworks/Python.framework/Versions/3.4/lib/python3.4/lib-dynload"
-            , "/opt/boxen/homebrew/lib/python3.4/site-packages"]
+
+data Environment = Environment { pyvers :: String,
+                                 pythonpath :: [FilePath]
+                               } deriving (Show)
+-- type Env r = ReaderT Environment (IO) r
+
+-- -- test reader env
+-- testreader = Environment "python3.4" testpythonpath
 
 
-type PythonPath fp = [FilePath]
+-- Tried and failed to put PythonPath and Python version into ReaderT: ToDo
+-- getPyVers :: Env String
+-- getPyVers = asks pyvers
+--   -- env <- ask
+--   -- return $ pyvers env
+
+-- getPyPath :: Env [FilePath]
+-- getPyPath = asks pythonpath
+--             -- do
+--   -- env <- ask
+--   -- return $ pythonpath env
+
 
 cleanResults :: I.Importer -> Bool
 cleanResults (I.ImportModule []) = False
@@ -71,11 +91,14 @@ getPath (I.RelativeImport (x:xs)) = intercalate "/" ys
 -- However, not all of these will exist, because many of the final
 -- elements will represent objects inside the imported module
 -- ex: "../some/package/class" where "class" is really an object inside the "package" module
-initialImportPaths :: FilePath -> IO [I.Importer] -> IO [FilePath]
+initialImportPaths :: FilePath -> IO [FilePath]
 initialImportPaths fname = do
-  let result = getImports fname
-  return $ fmap (pyFile . getPath) <$> result
+  res <- doesFileExist fname
+  case res of
+    True -> fmap (pyFile . getPath) <$>  getImports fname
+    False -> return []
 
+-- Functions for testing existance of paths
 dropFinal :: FilePath -> FilePath
 dropFinal "" = ""
 dropFinal xs = pyFile dropped
@@ -93,30 +116,65 @@ getRealPath fp = do
 getRealPaths :: [FilePath] -> IO [FilePath]
 getRealPaths = liftM catMaybes . sequence . fmap getRealPath
 
-
+-- Partition into relative and absolute paths
 -- List must not be empty: FilePaths must not be empty
 relAbsPaths :: [FilePath] -> ([FilePath], [FilePath])
 relAbsPaths = partition (\fp -> head fp == '.')
 
 
+--                                     --
+-- Functions that deal with PythonPath --
+--                                     --
+
+-- Take a PythonPath and a list of 'import' FilePaths and figures out which are real paths
+-- Strategy: for each import path, take the first element and run a cartesian product with all possible
+-- paths from PythonPath. Then filter against doesDirectoryExist and return first matching
+
+-- Cartesian product of PythonPath dirs and one import file's path. Chop off first part
+locateModule :: [FilePath] -> FilePath -> IO (Maybe FilePath)
+locateModule [] _ = return Nothing  -- empty PythonPath: cannot locate
+locateModule _ [] = return Nothing  -- empty FilePath: does not exist
+locateModule xs y = do
+  let splitted = splitOn "/" y
+  let moddir = head splitted
+  let rest = intercalate "/" $ tail $ splitted
+  location <- locateModuleDir $ (++) <$> xs <*> [moddir]
+  return $ (++) <$> location <*> Just rest
+
+-- Look for one module's directory in list: return Maybe FilePath for first one that exists, Nothing if None
+locateModuleDir :: [FilePath] -> IO (Maybe FilePath)
+locateModuleDir xs = do
+  res <- filterM doesDirectoryExist xs
+  getDirPath res
+
+-- Take directory Paths and match first directory that exists
+getDirPath :: [FilePath] -> IO (Maybe FilePath)
+getDirPath fps
+  | length fps == 0 = return Nothing
+  | otherwise = return $ Just (head fps)
+
+-- Takes a list of PythonPaths and a list of imprted Paths and returns actual paths
+locateModules :: [FilePath] -> [FilePath] -> IO [Maybe FilePath]
+locateModules fp1 fp2 = sequence $ locateModule fp1 <$> fp2
+
+-- Takes a python version and removes anything matching lib/{python vers}
+filter3rdPartyStdLibPaths :: String -> [FilePath] -> [FilePath]
+filter3rdPartyStdLibPaths pyv xs = filter (\fp -> not $ isInfixOf ("lib/" ++ pyv) fp) xs
 
 
---normalizePythonPaths :: [FilePath] -> IO [FilePath]
---normalizePythonPaths = liftM filter doesDirectoryExist
+-- Plan:
+-- Get import modules: initialImports filename
+-- Separate into "relative" and "other paths": relAbsPaths filepaths
+-- Filter 3rd Party and Stdlib out of PythonPaths: filter3rd... pyvers pythonpaths
+-- Combine "other paths" with paths from PythonPath: locateModules PythonPaths FilePaths
+-- validate paths: getRealPaths filepaths
 
-
--- Other ideas
--- Takes a PythonPath and a list of FilePaths and figures out which are real paths
-locateModules :: [FilePath] -> [FilePath] -> [FilePath]
-locateModules fp1 fp2 = undefined
-
--- Removes anything not included in the Strings (packages) passed in
--- "lib/python"
-filter3rdPartyStdLib :: [String] -> [FilePath] -> [FilePath]
-filter3rdPartyStdLib packages filepaths = undefined
-
-
-
--- Walk directory: http://rosettacode.org/wiki/Walk_a_directory/Recursively#Haskell
--- check file exists: http://rosettacode.org/wiki/Check_that_file_exists#Haskell
--- See also: Chapter 18 of Real World Haskell
+findAllModules :: Environment -> FilePath -> IO [FilePath]
+findAllModules env pyfile = do
+  initial_imports <- initialImportPaths <$> return pyfile
+  (rel_paths, abs_paths) <- liftM relAbsPaths initial_imports
+  let version = pyvers env
+  let ppath = pythonpath env
+  let python_path = filter3rdPartyStdLibPaths version ppath
+  modules <- locateModules python_path abs_paths
+  return $ (catMaybes modules) ++ rel_paths

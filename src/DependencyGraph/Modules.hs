@@ -7,6 +7,7 @@
 module DependencyGraph.Modules (
   Environment(..),
   getImports,
+  absolutize,
   getPath,
   dotsToPath,
   initialImportPaths,
@@ -29,6 +30,8 @@ import Data.List.Split
 import Data.Maybe
 import Prelude
 import System.Directory
+import System.Path.NameManip (guess_dotdot, absolute_path)
+import System.FilePath (addTrailingPathSeparator, normalise)
 
 import qualified DependencyGraph.ImportLine as I
 import qualified Text.ParserCombinators.Parsec as P
@@ -54,6 +57,21 @@ data Environment = Environment { pyvers :: String,
 --             -- do
 --   -- env <- ask
 --   -- return $ pythonpath env
+
+
+-- FP Complete Provided the following
+absolutize :: FilePath -> IO FilePath
+absolutize aPath
+    | "~" `isPrefixOf` aPath = do
+        homePath <- getHomeDirectory
+        return $ normalise $ addTrailingPathSeparator homePath
+                             ++ tail aPath
+    | otherwise = do
+        pathMaybeWithDots <- absolute_path aPath
+        return $ fromJust $ guess_dotdot pathMaybeWithDots
+
+absoluteAllRels :: [FilePath] -> IO [FilePath]
+absoluteAllRels = sequence . map absolutize
 
 
 cleanResults :: I.Importer -> Bool
@@ -176,5 +194,6 @@ findAllModules env pyfile = do
   let version = pyvers env
   let ppath = pythonpath env
   let python_path = filter3rdPartyStdLibPaths version ppath
-  modules <- locateModules python_path abs_paths
-  return $ (catMaybes modules) ++ rel_paths
+  modules <- catMaybes <$> locateModules python_path abs_paths
+  other_modules <- getRealPaths <$> absoluteAllRels rel_paths
+  (++) modules <$> other_modules

@@ -1,22 +1,39 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module DependencyGraph.GraphModules (
-  Graph,
-  graphModule
+  Node(..),
+  makeVertices,
+  makeNode
   ) where
 
+import Control.Applicative
 import Control.Monad
-import DependencyGraph.Modules as M
+import Prelude
+import qualified DependencyGraph.Modules as M
 
 
-data Graph = Graph { head :: FilePath
-                   , nodes :: IO [FilePath]}
+data Node = Node { node :: FilePath
+                 , nodes :: [FilePath]
+                 , vertices :: [(FilePath, FilePath)]}
+
+makeVertices :: Functor f => FilePath -> f FilePath -> f (FilePath, FilePath)
+makeVertices infile fps = (,) infile <$> fps
+
+makeNode :: M.Environment -> IO FilePath -> IO Node
+makeNode env infile = do
+  file <- infile
+  absfile <- M.absolutize file
+  paths <- M.findAllModules env file
+  let nodeVertices = makeVertices absfile paths
+  return $ Node absfile paths nodeVertices
+
+-- processModule :: Node -> [Node] -> [Node]
+-- processModule = []
+
+-- graphModules :: M.Environment -> FilePath -> [Node] -> [Node]
+-- graphModules env infile [] = []
 
 
 
-graphModule :: M.Environment -> FilePath -> Graph
-graphModule env infile = do
-  let paths = M.findAllModules env infile
-  Graph infile paths
-
--- Walk directory: http://rosettacode.org/wiki/Walk_a_directory/Recursively#Haskell
--- check file exists: http://rosettacode.org/wiki/Check_that_file_exists#Haskell
--- See also: Chapter 18 of Real World Haskell
+-- -- Walk directory: http://rosettacode.org/wiki/Walk_a_directory/Recursively#Haskell
+-- -- See: Chapter 18 of Real World Haskell

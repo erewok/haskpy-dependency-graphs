@@ -64,6 +64,8 @@ executable pydepencies
                     , array >= 0.4
                     , parsec
                     , text
+                    , MissingH
+                    , filepath
 
   ghc-options:        -Wall
                       -fno-warn-unused-binds
@@ -79,8 +81,10 @@ executable pydepencies
   hs-source-dirs:     src
 
   exposed-modules:    DependencyGraph
+                      DependencyGraph.GraphModules
                       DependencyGraph.ImportLine
                       DependencyGraph.Modules
+
   main-is:            Main.hs
 
 -- executable dependency-graph

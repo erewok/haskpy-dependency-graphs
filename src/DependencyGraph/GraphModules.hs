@@ -1,9 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module DependencyGraph.GraphModules (
-  Node(..),
-  makeEdges,
-  makeNode
+  Node(..)
+  , makeEdges
+  , makeNode
+  , discoverAllNodes
+  , visitAllNodes
+  , generateGraph
   ) where
 
 import Control.Applicative
@@ -63,13 +64,23 @@ markVisited nd
 unvisitedNodes :: [Node] -> [Node]
 unvisitedNodes = filter nodeVisited
 
-visitAllNodes :: M.Environment -> [IO Node] -> IO [Node]
+visitAllNodes :: M.Environment -> IO [Node] -> IO [Node]
 visitAllNodes env nds = do
-  let allnodes = sequence nds
-  mustvisit <- unvisitedNodes <$> allnodes
+  allnodes <- nds
+  let mustvisit = unvisitedNodes allnodes
   let tovisit = pure <$> node <$> mustvisit
-  let visited = liftM markVisited . makeNode env <$> tovisit
-  sequence $ (++) nds $ visited
+  let newlyvisited = sequence $ liftM markVisited . makeNode env <$> tovisit
+  (++) <$> nds <*> newlyvisited
 
 allNodesVisited :: [Node] -> Bool
 allNodesVisited = and . map nodeVisited
+
+stop :: [Node] -> Bool
+stop nds = allNodesVisited nds && (null $ undiscoveredNodes nds)
+
+generateGraph :: M.Environment -> IO [Node] -> IO [Node]
+generateGraph env nds = do
+  continue <- liftM stop nds
+  case continue of
+    True -> nds
+    False -> visitAllNodes env nds

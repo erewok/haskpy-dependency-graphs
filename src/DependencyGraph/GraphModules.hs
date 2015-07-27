@@ -53,6 +53,9 @@ visited _ = False
 nodeVisited :: Node -> Bool
 nodeVisited = visited . nodes
 
+allNodesVisited :: [Node] -> Bool
+allNodesVisited = and . map nodeVisited
+
 markVisited :: Node -> Node
 markVisited nd
   | nodeVisited nd = nd
@@ -71,9 +74,6 @@ visitAllNodes env nds = do
   let tovisit = pure <$> node <$> mustvisit
   let newlyvisited = sequence $ liftM markVisited . makeNode env <$> tovisit
   (++) <$> nds <*> newlyvisited
-
-allNodesVisited :: [Node] -> Bool
-allNodesVisited = and . map nodeVisited
 
 stop :: [Node] -> Bool
 stop nds = allNodesVisited nds && (null $ undiscoveredNodes nds)

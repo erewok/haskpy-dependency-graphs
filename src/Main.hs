@@ -12,5 +12,5 @@ main = do
   (pyvers:infile:[]) <- getArgs
   pypath <- getEnv "PYTHONPATH"
   let env = DG.Environment pyvers (splitOn ":" pypath)
-  modules <- DG.findAllModules env infile
-  mapM_ putStrLn modules
+  let results = DG.startGraph env infile
+  DG.printGraph results

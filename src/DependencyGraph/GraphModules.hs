@@ -15,7 +15,8 @@ import qualified DependencyGraph.Modules as M
 
 data Node = Node { node :: FilePath
                  , nodes :: [FilePath]
-                 , edges :: [(FilePath, FilePath)]}
+                 , edges :: [(FilePath, FilePath)]
+                 } deriving (Show, Eq)
 
 makeEdges :: Functor f => FilePath -> f FilePath -> f (FilePath, FilePath)
 makeEdges infile fps = (,) infile <$> fps

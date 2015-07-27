@@ -5,18 +5,21 @@
 -- to define application imports.
 
 module DependencyGraph.Modules (
-  Environment(..),
-  getImports,
-  absolutize,
-  getPath,
-  dotsToPath,
-  initialImportPaths,
-  getRealPath,
-  getRealPaths,
-  locateModule,
-  locateModules,
-  filter3rdPartyStdLibPaths,
-  findAllModules
+  Environment(..)
+  , getImports
+  , absolutize
+  , getPath
+  , dotsToPath
+  , initialImportPaths
+  , getRealPath
+  , getRealPaths
+  , relAbsPaths
+  , absoluteAllRels
+  , locateModule
+  , locateModules
+  , filter3rdPartyStdLibPaths
+  , findAllModules
+
   ) where
 
 import Control.Applicative
@@ -31,7 +34,8 @@ import Data.Maybe
 import Prelude
 import System.Directory
 import System.Path.NameManip (guess_dotdot, absolute_path)
-import System.FilePath (addTrailingPathSeparator, normalise)
+import System.FilePath (takeDirectory, replaceFileName,
+                        addTrailingPathSeparator, normalise)
 
 import qualified DependencyGraph.ImportLine as I
 import qualified Text.ParserCombinators.Parsec as P
@@ -72,7 +76,6 @@ absolutize aPath
 
 absoluteAllRels :: [FilePath] -> IO [FilePath]
 absoluteAllRels = sequence . map absolutize
-
 
 cleanResults :: I.Importer -> Bool
 cleanResults (I.ImportModule []) = False
@@ -139,7 +142,6 @@ getRealPaths = liftM catMaybes . sequence . fmap getRealPath
 relAbsPaths :: [FilePath] -> ([FilePath], [FilePath])
 relAbsPaths = partition (\fp -> head fp == '.')
 
-
 --                                     --
 -- Functions that deal with PythonPath --
 --                                     --
@@ -194,6 +196,12 @@ findAllModules env pyfile = do
   let version = pyvers env
   let ppath = pythonpath env
   let python_path = filter3rdPartyStdLibPaths version ppath
+  let dirname = takeDirectory pyfile
   modules <- catMaybes <$> locateModules python_path abs_paths
+
+  initialdir <- getCurrentDirectory
+  -- absoluteAllRels needs this to locate relative paths
+  setCurrentDirectory dirname
   other_modules <- getRealPaths <$> absoluteAllRels rel_paths
+  setCurrentDirectory initialdir
   (++) modules <$> other_modules

@@ -3,6 +3,7 @@ module DependencyGraph (
   , module Imports
   , module Modules
   , startGraph
+  , printableNode
   , printGraph
   ) where
 
@@ -20,10 +21,11 @@ startGraph env infile = do
 
 
 printableNode :: Node -> String
-printableNode nd = (++) "Edges: " $ concatMap combineTp $ edges nd
-                   where combineTp = (\tp -> fst tp ++ " " ++ snd tp)
+printableNode nd = (++) intro $ unlines $ map combineTp $ edges nd
+  where combineTp = (\tp -> "(" ++ fst tp ++ ", " ++ snd tp ++ ") ")
+        intro = (node nd) ++ " Edges: "
 
 printGraph :: IO [Node] -> IO ()
 printGraph nds = do
   nods <- nds
-  print $ unlines $ mapM printableNode nods
+  putStrLn $ concat $ mapM printableNode nods

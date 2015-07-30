@@ -170,7 +170,7 @@ locateModuleDir xs = do
 -- Take directory Paths and match first directory that exists
 getDirPath :: [FilePath] -> IO (Maybe FilePath)
 getDirPath fps
-  | length fps == 0 = return Nothing
+  | null fps = return Nothing
   | otherwise = return $ Just (head fps)
 
 -- Takes a list of PythonPaths and a list of imprted Paths and returns actual paths

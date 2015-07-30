@@ -20,14 +20,17 @@ startGraph env infile = do
   generateGraph env (pure [firstNode])
 
 
+printEdge :: (String, String) -> String
+printEdge (a, b) = "(" ++ a ++ ", " ++ b ++ ")\n"
+
 printableNode :: Node -> String
-printableNode nd = (++) intro $ unlines $ map combineTp $ edges nd
-  where combineTp = (\tp -> "(" ++ fst tp ++ ", " ++ snd tp ++ ") ")
-        intro = (node nd) ++ " Edges: "
+printableNode nd
+  | null $ edges nd = ""
+  | otherwise = node nd ++ " Edges: \n" ++ concatMap printEdge (edges nd) ++ "\n\n"
 
 printGraph :: IO [Node] -> IO ()
 printGraph nds = do
   nods <- nds
-  putStrLn $ concat $ mapM printableNode nods
+  putStrLn $ concatMap printableNode nods
   putStrLn "Modules discovered: "
-  putStrLn $ concat $ mapM node nods
+  putStrLn $ concatMap node nods

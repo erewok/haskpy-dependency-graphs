@@ -29,3 +29,5 @@ printGraph :: IO [Node] -> IO ()
 printGraph nds = do
   nods <- nds
   putStrLn $ concat $ mapM printableNode nods
+  putStrLn "Modules discovered: "
+  putStrLn $ concat $ mapM node nods

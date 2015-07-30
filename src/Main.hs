@@ -1,7 +1,5 @@
 module Main where
 
-import Control.Monad
-import Data.List.Split
 import Prelude
 import System.Environment
 import System.FilePath (splitSearchPath)

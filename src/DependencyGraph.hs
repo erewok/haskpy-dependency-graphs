@@ -12,6 +12,7 @@ import Control.Applicative
 import Data.String.Utils
 import Prelude
 import System.IO
+import Paths_dependency_graph
 
 import DependencyGraph.GraphModules as Graphs
 import DependencyGraph.ImportLine as Imports
@@ -46,8 +47,9 @@ edgeToLink (a, b) = "{source: \"" ++ a ++ "\", target: \"" ++ b ++ "\", type: \"
 
 displayGraph :: IO [Node] -> IO ()
 displayGraph nods = do
-  template <- readFile "src/html/index.html"
+  template <- getDataFileName "html/index.html"
+  content <- readFile template
   let all_edges = concat <$> filter (not . null) <$> map edges <$> nods
   links <- concatMap edgeToLink <$> all_edges
-  let index = replace sub links template
+  let index = replace sub links content
   putStrLn index

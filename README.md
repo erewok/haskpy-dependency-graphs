@@ -13,6 +13,8 @@ This project has just been started (and may not ever be completed), but in an ef
 
 ## Problem Areas
 
+* Function `displayGraph` relies on route to index template. **This won't work outside of source directory!**
+
 * Force graph may be a poor way to represent this data structure
 
 * Nothing from any `__init__.py` module is being examined
@@ -22,8 +24,6 @@ This project has just been started (and may not ever be completed), but in an ef
 * Graphs are not that useable at the moment: need to tweak D3 display.
 
 * Graphs do not mark cicles, or direction of edges.
-
-* Function `displayGraph` relies on route to index template. This won't work outside of source directory.
 
 * Functions that examine modules may fail on missing files.
 

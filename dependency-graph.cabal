@@ -38,6 +38,7 @@ category:            Development
 
 build-type:          Simple
 
+data-files:          "html/index.html"
 -- Extra files to be distributed with the package, such as examples or a
 -- README.
 -- extra-source-files:
@@ -66,6 +67,7 @@ executable pydepencies
                     , text
                     , MissingH
                     , filepath
+  other-modules:    Paths_dependency_graph
 
   ghc-options:        -Wall
                       -fno-warn-unused-binds

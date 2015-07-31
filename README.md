@@ -13,18 +13,18 @@ This project has just been started (and may not ever be completed), but in an ef
 
 ## Problem Areas
 
-    * Force graph may be a poor way to represent this data structure
+* Force graph may be a poor way to represent this data structure
 
-    * Nothing from any `__init__.py` module is being examined
+* Nothing from any `__init__.py` module is being examined
 
-    * No performance analysis has been done. This may not work for larger applications
+* No performance analysis has been done. This may not work for larger applications
 
-    * Graphs are not that useable at the moment: need to tweak D3 display.
+* Graphs are not that useable at the moment: need to tweak D3 display.
 
-    * Graphs do not mark cicles, or direction of edges.
+* Graphs do not mark cicles, or direction of edges.
 
-    * Function `displayGraph` relies on route to index template. This won't work outside of source directory.
+* Function `displayGraph` relies on route to index template. This won't work outside of source directory.
 
-    * Functions that examine modules may fail on missing files.
+* Functions that examine modules may fail on missing files.
 
-    * And more...
+* And more...

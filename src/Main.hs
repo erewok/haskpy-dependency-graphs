@@ -12,4 +12,4 @@ main = do
   pypath <- getEnv "PYTHONPATH"
   let env = DG.Environment pyvers (splitSearchPath pypath)
   let results = DG.startGraph env infile
-  DG.printGraph results
+  DG.displayGraph results

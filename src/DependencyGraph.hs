@@ -5,10 +5,13 @@ module DependencyGraph (
   , startGraph
   , printableNode
   , printGraph
+  , displayGraph
   ) where
 
 import Control.Applicative
+import Data.String.Utils
 import Prelude
+import System.IO
 
 import DependencyGraph.GraphModules as Graphs
 import DependencyGraph.ImportLine as Imports
@@ -33,4 +36,18 @@ printGraph nds = do
   nods <- nds
   putStrLn $ concatMap printableNode nods
   putStrLn "Modules discovered: "
-  putStrLn $ concatMap node nods
+  putStrLn $ concatMap (\n -> node n ++ "\n") nods
+
+sub :: String
+sub = "//### EDGES ###//\n"
+
+edgeToLink :: (String, String) -> String
+edgeToLink (a, b) = "{source: \"" ++ a ++ "\", target: \"" ++ b ++ "\", type: \"Direct\"},\n"
+
+displayGraph :: IO [Node] -> IO ()
+displayGraph nods = do
+  template <- readFile "src/html/index.html"
+  let all_edges = concat <$> filter (not . null) <$> map edges <$> nods
+  links <- concatMap edgeToLink <$> all_edges
+  let index = replace sub links template
+  putStrLn index

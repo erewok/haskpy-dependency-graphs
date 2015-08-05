@@ -43,7 +43,7 @@ sub :: String
 sub = "//### EDGES ###//\n"
 
 edgeToLink :: (String, String) -> String
-edgeToLink (a, b) = "{source: \"" ++ a ++ "\", target: \"" ++ b ++ "\", type: \"Direct\"},\n"
+edgeToLink (a, b) = "{source: \"" ++ a ++ "\", target: \"" ++ b ++ "\", type: \"direct\"},\n"
 
 displayGraph :: IO [Node] -> IO ()
 displayGraph nods = do

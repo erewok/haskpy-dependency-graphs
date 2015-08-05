@@ -13,7 +13,7 @@ This project has just been started (and may not ever be completed), but in an ef
 
 ## Problem Areas
 
-* Function `displayGraph` relies on route to index template. **This won't work outside of source directory!**
+* ~~Function `displayGraph` relies on route to index template. This won't work outside of source directory!~~
 
 * Force graph may be a poor way to represent this data structure
 
@@ -23,8 +23,10 @@ This project has just been started (and may not ever be completed), but in an ef
 
 * Graphs are not that useable at the moment: need to tweak D3 display.
 
-* Graphs do not mark cicles, or direction of edges.
+* Graphs do not mark cycles, ~~or direction of edges.~~
 
 * Functions that examine modules may fail on missing files.
+
+* Will not work for Python modules with multiline imports.
 
 * And more...

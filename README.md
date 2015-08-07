@@ -15,6 +15,8 @@ This project has just been started (and may not ever be completed), but in an ef
 
 * ~~Function `displayGraph` relies on route to index template. This won't work outside of source directory!~~
 
+* There is no real attempt at error handling at this point, and there are likely to be some errors...
+
 * Force graph may be a poor way to represent this data structure
 
 * Nothing from any `__init__.py` module is being examined

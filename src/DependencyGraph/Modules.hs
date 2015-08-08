@@ -34,8 +34,7 @@ import Data.Maybe
 import Prelude
 import System.Directory
 import System.Path.NameManip (guess_dotdot, absolute_path)
-import System.FilePath (takeDirectory, replaceFileName,
-                        addTrailingPathSeparator, normalise)
+import System.FilePath
 
 import qualified DependencyGraph.ImportLine as I
 import qualified Text.ParserCombinators.Parsec as P
@@ -89,13 +88,16 @@ getGoodResults (Right xs) = xs
 getImports :: FilePath -> IO [I.Importer]
 getImports fname = do
   file <- readFile fname
-  let results = fmap (P.parse I.imports "") $ lines file
-  return $ filter cleanResults $ concat $ fmap getGoodResults results
+  let results = P.parse I.imports "" <$> lines file
+  return $ filter cleanResults $ concat $ getGoodResults <$> results
+
+joinWithSeparator :: [String] -> FilePath
+joinWithSeparator xs = joinPath $ addTrailingPathSeparator <$> xs
 
 dotsToPath :: FilePath -> FilePath
 dotsToPath xs
   | (read xs :: Int) == 1 = "."
-  | otherwise = intercalate "/" $ replicate n dots
+  | otherwise = joinWithSeparator $ replicate n dots
                 where n = (read xs :: Int) - 1
                       dots = ".."
 
@@ -103,8 +105,8 @@ pyFile :: FilePath -> FilePath
 pyFile = (++".py")
 
 getPath :: I.Importer -> String
-getPath (I.ImportModule xs) = intercalate "/" xs
-getPath (I.RelativeImport (x:xs)) = intercalate "/" ys
+getPath (I.ImportModule xs) = joinWithSeparator xs
+getPath (I.RelativeImport (x:xs)) = joinWithSeparator ys
                                   where ys = dots : xs
                                         dots = dotsToPath x
 
@@ -122,6 +124,7 @@ initialImportPaths fname = do
 -- Functions for testing existance of paths
 dropFinal :: FilePath -> FilePath
 dropFinal "" = ""
+-- dropFinal xs = (pyFile . takeDirectory) xs
 dropFinal xs = pyFile dropped
                where dropped = intercalate "/" $ init $ splitOn "/" xs
 
@@ -140,7 +143,7 @@ getRealPaths = liftM catMaybes . sequence . fmap getRealPath
 -- Partition into relative and absolute paths
 -- List must not be empty: FilePaths must not be empty
 relAbsPaths :: [FilePath] -> ([FilePath], [FilePath])
-relAbsPaths = partition (\fp -> head fp == '.')
+relAbsPaths = partition isRelative
 
 --                                     --
 -- Functions that deal with PythonPath --
@@ -155,9 +158,9 @@ locateModule :: [FilePath] -> FilePath -> IO (Maybe FilePath)
 locateModule [] _ = return Nothing  -- empty PythonPath: cannot locate
 locateModule _ [] = return Nothing  -- empty FilePath: does not exist
 locateModule xs y = do
-  let splitted = splitOn "/" y
+  let splitted = splitPath y
   let moddir = head splitted
-  let rest = intercalate "/" $ tail $ splitted
+  let rest = joinWithSeparator $ tail $ splitted
   location <- locateModuleDir $ (++) <$> xs <*> [moddir]
   return $ (++) <$> location <*> Just rest
 
@@ -179,7 +182,7 @@ locateModules fp1 fp2 = sequence $ locateModule fp1 <$> fp2
 
 -- Takes a python version and removes anything matching lib/{python vers}
 filter3rdPartyStdLibPaths :: String -> [FilePath] -> [FilePath]
-filter3rdPartyStdLibPaths pyv xs = filter (\fp -> not $ isInfixOf ("lib/" ++ pyv) fp) xs
+filter3rdPartyStdLibPaths pyv = filter (not . isInfixOf ("lib/" ++ pyv))
 
 
 -- Plan:

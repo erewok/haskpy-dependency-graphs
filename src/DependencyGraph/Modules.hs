@@ -196,6 +196,8 @@ findAllModules :: Environment -> FilePath -> IO [FilePath]
 findAllModules env pyfile = do
   initial_imports <- initialImportPaths <$> return pyfile
   (rel_paths, abs_paths) <- liftM relAbsPaths initial_imports
+  -- putStrLn $ "Found Relative Paths: " ++ unwords rel_paths
+  -- putStrLn $ "Found Absolute Paths: " ++ unwords abs_paths
   let version = pyvers env
   let ppath = pythonpath env
   let python_path = filter3rdPartyStdLibPaths version ppath
@@ -208,3 +210,36 @@ findAllModules env pyfile = do
   other_modules <- getRealPaths <$> absoluteAllRels rel_paths
   setCurrentDirectory initialdir
   (++) modules <$> other_modules
+
+
+-- notes
+--locateModule xs y
+--  | isTopLevel y = do
+--      putStrLn $ "LocateModule TopLevel y " ++ y
+--      return $ matchModule xs $ dropExtension y
+--  | otherwise = do
+--      let splitted = splitPath y
+--      putStrLn $ "LocateModule y " ++ y
+--      let moddir = splitted !! 1
+--      putStrLn $ "LocateModule moddir " ++ moddir
+--      let rest = dropTrailingPathSeparator $ joinWithSeparator $ drop 2 splitted
+--      putStrLn $ "LocateModule rest " ++ rest
+--      location <- locateModuleDir $ (++) <$> xs <*> [moddir]
+--      case (null rest) of
+--       True -> return location
+--       False -> return $ (++) <$> location <*> Just rest
+
+--isTopLevel :: FilePath -> Bool
+--isTopLevel y
+--  | null test = True
+--  | length test == 1 = True
+--  | otherwise = False
+--                where test = splitPath y
+--
+--matchModule :: [FilePath] -> FilePath -> Maybe FilePath
+--matchModule xs y
+--  | not $ null test = Just $ head test
+--  | otherwise = Nothing
+--                where test = filter (isSuffixOf y) xs
+--
+--

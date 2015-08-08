@@ -102,7 +102,7 @@ dotsToPath xs
                       dots = ".."
 
 pyFile :: FilePath -> FilePath
-pyFile = (++".py")
+pyFile xs = (++".py") $ dropTrailingPathSeparator xs
 
 getPath :: I.Importer -> String
 getPath (I.ImportModule xs) = joinWithSeparator xs
@@ -143,7 +143,7 @@ getRealPaths = liftM catMaybes . sequence . fmap getRealPath
 -- Partition into relative and absolute paths
 -- List must not be empty: FilePaths must not be empty
 relAbsPaths :: [FilePath] -> ([FilePath], [FilePath])
-relAbsPaths = partition isRelative
+relAbsPaths = partition (\fp -> head fp == '.')
 
 --                                     --
 -- Functions that deal with PythonPath --
@@ -160,7 +160,7 @@ locateModule _ [] = return Nothing  -- empty FilePath: does not exist
 locateModule xs y = do
   let splitted = splitPath y
   let moddir = head splitted
-  let rest = joinWithSeparator $ tail $ splitted
+  let rest = joinWithSeparator $ tail splitted
   location <- locateModuleDir $ (++) <$> xs <*> [moddir]
   return $ (++) <$> location <*> Just rest
 

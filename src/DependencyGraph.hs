@@ -2,6 +2,7 @@ module DependencyGraph (
   module Graphs
   , module Imports
   , module Modules
+  , module Loaders
   , startGraph
   , printableNode
   , printGraph
@@ -17,6 +18,7 @@ import Paths_dependency_graph
 import DependencyGraph.GraphModules as Graphs
 import DependencyGraph.ImportLine as Imports
 import DependencyGraph.Modules as Modules
+import DependencyGraph.Loaders as Loaders
 
 startGraph :: Environment -> FilePath -> IO [Node]
 startGraph env infile = do

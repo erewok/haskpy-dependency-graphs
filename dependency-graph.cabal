@@ -74,6 +74,7 @@ executable pydepencies
                       -fno-warn-unused-do-bind
                       -fno-warn-unused-imports
                       -fno-warn-type-defaults
+                      -fwarn-incomplete-patterns
 
   default-extensions: NoImplicitPrelude
                       ScopedTypeVariables
@@ -86,6 +87,7 @@ executable pydepencies
                       DependencyGraph.GraphModules
                       DependencyGraph.ImportLine
                       DependencyGraph.Modules
+                      DependencyGraph.Loaders
 
   main-is:            Main.hs
 

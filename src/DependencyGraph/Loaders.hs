@@ -29,14 +29,10 @@ import System.FilePath
 
 
 -- One of these imports may be one of three different things
+-- This is unused for the moment, but perhaps can help with locateModule at bottom
 data PyImport = PyModule FilePath
               | PyPackage FilePath
               | PyObject FilePath
-
--- Each of these three different things may have different ways of being:
--- a) parsed
--- b) represented in a graph
-
 
 -- Reduce PythonPath to reduce search space
 -- Takes a python version and removes anything matching lib/{python vers}
@@ -45,6 +41,7 @@ filter3rdPartyStdLibPaths pyv = filter nozip . filter noLib
                                 where nozip = (not . isSuffixOf "zip")
                                       noLib = (not . isInfixOf ("lib/" ++ pyv))
 
+-- Add "py" extension to FilePath
 pyFile :: FilePath -> FilePath
 pyFile xs = addExtension (dropTrailingPathSeparator xs) "py"
 
@@ -63,6 +60,7 @@ findPackage pythonpath packpath = do
     False -> return (result, (addExtension "py" remainder))
 
 -- Cartesian product of PythonPath dirs and one import file's path.
+-- Return first matching, actual, existing file
 findModule :: [FilePath] -> FilePath -> IO (Maybe FilePath)
 findModule [] _ = return Nothing
 findModule _ [] = return Nothing
@@ -75,7 +73,8 @@ findModule pythonpath modpath = do
     True -> return Nothing
     False -> return $ Just $ result !! 0
 
-
+-- Return FilePath (module) that exists and is part of object's FilePath
+-- Does not look for existence of Object inside module
 findPyObject :: [FilePath] -> FilePath -> IO (Maybe FilePath)
 findPyObject [] _ = return Nothing
 findPyObject pythonpath modpath
@@ -91,8 +90,8 @@ findPyObject pythonpath modpath
       return found
 
 locateModule :: [FilePath] -> FilePath -> IO (Maybe FilePath)
-locateModule xs [] = return $ Just $ xs !! 0
 locateModule [] _ = return Nothing
+locateModule xs [] = return $ Just $ xs !! 0
 locateModule pythonpath importpath = do
   isModule <- findModule pythonpath importpath
   case isModule of

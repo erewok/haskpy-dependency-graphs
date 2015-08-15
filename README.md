@@ -19,7 +19,7 @@ This project has just been started (and may not ever be completed), but in an ef
 
 * ~~Only works on relative paths for the moment!~~
 
-* There is no real attempt at error handling at this point, and there are likely to be some errors...
+* There is only minimal attempt at error handling at this point.
 
 * No performance analysis has been done. This may not work for larger applications
 
@@ -27,9 +27,9 @@ This project has just been started (and may not ever be completed), but in an ef
 
 * Graphs do not mark cycles, ~~or direction of edges.~~
 
-* Functions that examine modules may fail on missing files.
-
 * Will not work for Python modules with multiline imports.
+
+* I have no idea how to write tests for Haskell code.
 
 * And more...
 

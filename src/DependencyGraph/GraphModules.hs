@@ -28,25 +28,6 @@ data Node = Node { node :: FilePath
                  , edges :: [(FilePath, FilePath)]
                  } deriving (Show, Eq)
 
-makeEdges :: Functor f => FilePath -> f FilePath -> f (FilePath, FilePath)
-makeEdges infile fps = (,) infile <$> fps
-
-markVisited :: Node -> Node
-markVisited nd
-  | nodeVisited nd = nd
-  | otherwise = Node infile visitedpaths nodeedges
-                 where infile = node nd
-                       visitedpaths = "$" : nodes nd
-                       nodeedges = edges nd
-
-makeNode :: M.Environment -> IO FilePath -> IO Node
-makeNode env infile = do
-  file <- infile
-  absfile <- M.absolutize file
-  paths <- nub <$> M.findAllModules env file
-  let nodeEdges = makeEdges absfile paths
-  return $ markVisited $ Node absfile paths nodeEdges
-
 -- Simple strategy:
 -- "Discovered" nodes are added to [Node] as Node discoveredPath [] []
 -- Visited nodes are then marked Node discoveredPath ["$" ...] [...]
@@ -66,6 +47,14 @@ makeDiscoveredNode fp = Node fp [] []
 discoverAllNodes :: [Node] -> [Node]
 discoverAllNodes allnodes = allnodes ++ newnodes
                             where newnodes = map makeDiscoveredNode $ undiscoveredNodes allnodes
+
+markVisited :: Node -> Node
+markVisited nd
+  | nodeVisited nd = nd
+  | otherwise = Node infile visitedpaths nodeedges
+                 where infile = node nd
+                       visitedpaths = "$" : nodes nd
+                       nodeedges = edges nd
 
 visited :: [FilePath] -> Bool
 visited [] = False
@@ -88,6 +77,17 @@ visitAllNodes env nds = do
   let mustvisit = map node $ unvisitedNodes allnodes
   newlyvisited <- sequence $ (makeNode env) <$> (map return mustvisit)
   return $ visitednodes ++ newlyvisited
+
+makeEdges :: Functor f => FilePath -> f FilePath -> f (FilePath, FilePath)
+makeEdges infile fps = (,) infile <$> fps
+
+makeNode :: M.Environment -> IO FilePath -> IO Node
+makeNode env infile = do
+  file <- infile
+  absfile <- M.absolutize file
+  paths <- nub <$> M.findAllModules env file
+  let nodeEdges = makeEdges absfile paths
+  return $ markVisited $ Node absfile paths nodeEdges
 
 stop :: [Node] -> Bool
 stop nds = allNodesVisited nds && (null $ undiscoveredNodes nds)

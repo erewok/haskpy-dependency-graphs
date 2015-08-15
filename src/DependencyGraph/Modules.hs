@@ -131,12 +131,20 @@ getRealPaths :: [FilePath] -> IO [FilePath]
 getRealPaths = liftM catMaybes . sequence . fmap getRealPath
 
 -- Partition into relative and absolute paths
--- List must not be empty: FilePaths must not be empty
 relAbsPaths :: [FilePath] -> ([FilePath], [FilePath])
 relAbsPaths = partition (\fp -> head fp == '.')
 
+
 findAllModules :: Environment -> FilePath -> IO [FilePath]
 findAllModules env pyfile = do
+  doesFileExist pyfile >>= (\res ->
+                              case res of
+                                True ->findAllModules' env pyfile
+                                False -> return [])
+
+-- File MUST exist
+findAllModules' :: Environment -> FilePath -> IO [FilePath]
+findAllModules' env pyfile = do
   initial_imports <- initialImportPaths <$> return pyfile
   (rel_paths, abs_paths) <- liftM relAbsPaths initial_imports
   let version = pyvers env

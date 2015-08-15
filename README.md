@@ -15,21 +15,23 @@ This project has just been started (and may not ever be completed), but in an ef
 
 * ~~Function `displayGraph` relies on route to index template. This won't work outside of source directory!~~
 
-* Nothing from any `__init__.py` module is being examined!!
-
 * ~~Only works on relative paths for the moment!~~
+
+* Nothing from any `__init__.py` module is being examined!
+
+* Graphs do not mark cycles, ~~or direction of edges.~~
 
 * There is only minimal attempt at error handling at this point.
 
 * No performance analysis has been done. This may not work for larger applications
 
-* Graphs are not that useable at the moment: need to tweak D3 display.
-
-* Graphs do not mark cycles, ~~or direction of edges.~~
+* Graphs need some work to be more readable/useful.
 
 * Will not work for Python modules with multiline imports.
 
 * I have no idea how to write tests for Haskell code.
+
+* Need to make invocation more flexible/intuitive (including various command-line options and scenarios).
 
 * And more...
 

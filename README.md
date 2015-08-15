@@ -10,6 +10,14 @@ This application was inspired by two things:
 
 This project has just been started (and may not ever be completed), but in an effort to save current progress, it is being hosted here.
 
+## Demo
+
+A demo file has been included:
+
+[Sample program output](http://htmlpreview.github.io/?https://github.com/pellagic-puffbomb/haskpy-dependency-graphs/blob/master/demo.html)
+
+Note that normally nodes in the source will include full OS file paths.
+
 
 ## Problem Areas
 

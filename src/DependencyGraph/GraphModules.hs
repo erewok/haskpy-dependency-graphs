@@ -19,8 +19,8 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.List
-import Prelude
 import qualified DependencyGraph.Modules as M
+import qualified DependencyGraph.Loaders as L
 
 
 data Node = Node { node :: FilePath
@@ -81,16 +81,16 @@ visitAllNodes env nds = do
 makeEdges :: Functor f => FilePath -> f FilePath -> f (FilePath, FilePath)
 makeEdges infile fps = (,) infile <$> fps
 
+stop :: [Node] -> Bool
+stop nds = allNodesVisited nds && (null $ undiscoveredNodes nds)
+
 makeNode :: M.Environment -> IO FilePath -> IO Node
 makeNode env infile = do
   file <- infile
   absfile <- M.absolutize file
-  paths <- nub <$> M.findAllModules env file
-  let nodeEdges = makeEdges absfile paths
-  return $ markVisited $ Node absfile paths nodeEdges
-
-stop :: [Node] -> Bool
-stop nds = allNodesVisited nds && (null $ undiscoveredNodes nds)
+  simple_paths <- nub <$> M.findAllModules env file
+  let nodeEdges = makeEdges absfile simple_paths
+  return $ markVisited $ Node absfile simple_paths nodeEdges
 
 generateGraph :: M.Environment -> IO [Node] -> IO [Node]
 generateGraph env nds = do
@@ -98,3 +98,7 @@ generateGraph env nds = do
   case continue of
     True -> nds
     False -> generateGraph env $ visitAllNodes env (discoverAllNodes <$> nds)
+
+
+addInits :: M.Environment -> IO FilePath -> IO [FilePath]
+addInits = undefined

@@ -11,7 +11,6 @@ module DependencyGraph (
 
 import Control.Applicative
 import Data.String.Utils
-import Prelude
 import System.IO
 import Paths_dependency_graph
 

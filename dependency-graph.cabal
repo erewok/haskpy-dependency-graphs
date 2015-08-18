@@ -76,10 +76,8 @@ executable pydepencies
                       -fno-warn-type-defaults
                       -fwarn-incomplete-patterns
 
-  default-extensions: NoImplicitPrelude
-                      ScopedTypeVariables
+  default-extensions: ScopedTypeVariables
                       InstanceSigs
-                      RebindableSyntax
 
   hs-source-dirs:     src
 

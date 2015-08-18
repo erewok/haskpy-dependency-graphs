@@ -1,6 +1,5 @@
 module Main where
 
-import Prelude
 import System.Environment
 import System.FilePath (splitSearchPath)
 

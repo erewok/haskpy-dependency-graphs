@@ -13,7 +13,6 @@ import Control.Monad
 import Data.List
 import Data.List.Split
 import Data.Maybe
-import Prelude
 import System.Directory
 import System.FilePath
 
@@ -108,3 +107,6 @@ locateModule pythonpath importpath = do
 
 locateModules :: [FilePath] -> [FilePath] -> IO [Maybe FilePath]
 locateModules fp1 fp2 = sequence $ locateModule fp1 <$> fp2
+
+locateInits :: [FilePath] -> FilePath -> IO [FilePath]
+locateInits = undefined

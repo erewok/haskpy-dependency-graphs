@@ -27,7 +27,6 @@ import Control.Applicative
 import Data.Monoid
 import Data.String
 
-import Prelude
 import qualified Text.ParserCombinators.Parsec as P hiding ((<|>))
 
 data Importer =

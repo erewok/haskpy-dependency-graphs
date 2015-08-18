@@ -23,7 +23,6 @@ import Control.Monad.IO.Class
 import Data.List
 import Data.List.Split
 import Data.Maybe
-import Prelude
 import System.Directory
 import System.Path.NameManip (guess_dotdot, absolute_path)
 import System.FilePath
@@ -145,7 +144,7 @@ findAllModules env pyfile = do
 -- File MUST exist
 findAllModules' :: Environment -> FilePath -> IO [FilePath]
 findAllModules' env pyfile = do
-  initial_imports <- initialImportPaths <$> return pyfile
+  initial_imports <- initialImportPaths <$> pure pyfile
   (rel_paths, abs_paths) <- liftM relAbsPaths initial_imports
   let version = pyvers env
   let ppath = pythonpath env

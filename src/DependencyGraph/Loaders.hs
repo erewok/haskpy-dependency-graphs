@@ -32,6 +32,16 @@ import System.FilePath
 data PyImport = PyModule FilePath
               | PyPackage FilePath
               | PyObject FilePath
+              | NotFound
+
+-- This must be implemented somewhere, right?
+dropWhileM :: Monad m => (a -> m Bool) -> [a] -> m [a]
+dropWhileM _ [] = return []
+dropWhileM p whole@(x:xs) = do
+  res <- p x
+  case res of
+    True -> dropWhileM p xs
+    False -> return whole
 
 -- Reduce PythonPath to reduce search space
 -- Takes a python version and removes anything matching lib/{python vers}
@@ -44,24 +54,40 @@ filter3rdPartyStdLibPaths pyv = filter nozip . filter noLib
 pyFile :: FilePath -> FilePath
 pyFile xs = addExtension (dropTrailingPathSeparator xs) "py"
 
+-- Functions for finding directories
+splitDirs :: FilePath -> [FilePath]
+splitDirs [] = []
+splitDirs fp = if cantSplit fp then [] else takeDirectory fp : (splitDirs $ takeDirectory fp)
+  where cantSplit = (\fp' -> takeDirectory fp' == "." || takeDirectory fp' == fp' || null fp')
+
+directoryDoesntExist :: FilePath -> IO Bool
+directoryDoesntExist = liftM not . doesDirectoryExist
+
+findFirstMatchingDir :: FilePath -> IO (Maybe FilePath)
+findFirstMatchingDir fp = do
+  matches <- dropWhileM directoryDoesntExist $ (fp : splitDirs fp)
+  case (null matches) of
+    True -> return Nothing
+    False -> return $ Just $ matches !! 0
+
 -- Cartesian product of PythonPath dirs and one import directory's path.
-findPackage :: [FilePath] -> FilePath -> IO ([FilePath], FilePath)
-findPackage xs [] = return (xs, "")
-findPackage [] _ = return ([], "")
+findPackage :: [FilePath] -> FilePath -> IO (Maybe FilePath)
+findPackage _ [] = return Nothing
 findPackage pythonpath packpath = do
-  let (x:xs) = splitPath $ dropExtension packpath
-  let remainder = joinPath xs
+  let packdir = dropExtension packpath
   let prepped_paths = map addTrailingPathSeparator pythonpath
-  let combinations = (++) <$> prepped_paths <*> [x]
-  result <- filterM doesDirectoryExist combinations
+  let combinations = (++) <$> prepped_paths <*> [packdir]
+  result <- catMaybes <$> mapM findFirstMatchingDir combinations
   case (null result) of
-    True -> return ([], packpath)
-    False -> return (result, (addExtension "py" remainder))
+    True -> return Nothing
+    False -> do
+      let package_init = result !! 0 ++ "/__init__.py"
+      bool <- doesFileExist package_init
+      if bool then return $ Just package_init else return Nothing
 
 -- Cartesian product of PythonPath dirs and one import file's path.
 -- Return first matching, actual, existing file
 findModule :: [FilePath] -> FilePath -> IO (Maybe FilePath)
-findModule [] _ = return Nothing
 findModule _ [] = return Nothing
 findModule _ ".py" = return Nothing
 findModule pythonpath modpath = do
@@ -75,7 +101,8 @@ findModule pythonpath modpath = do
 -- Return FilePath (module) that exists and is part of object's FilePath
 -- Does not look for existence of Object inside module
 findPyObject :: [FilePath] -> FilePath -> IO (Maybe FilePath)
-findPyObject [] _ = return Nothing
+-- findPyObject [] _ = return Nothing
+findPyObject _ [] = return Nothing
 findPyObject pythonpath modpath
   | (length $ splitPath modpath) > 1 = do
       let shortened = pyFile $ (joinPath . init . splitPath) modpath
@@ -100,10 +127,8 @@ locateModule pythonpath importpath = do
       case isPyObject of
         (Just pyObject) -> return $ Just pyObject
         Nothing -> do
-          (newpath, remainder) <- findPackage pythonpath importpath
-          case (null newpath) of
-            True -> return Nothing
-            False -> locateModule newpath remainder
+          newpath <- findPackage pythonpath importpath
+          return newpath
 
 locateModules :: [FilePath] -> [FilePath] -> IO [Maybe FilePath]
 locateModules fp1 fp2 = sequence $ locateModule fp1 <$> fp2

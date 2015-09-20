@@ -6,6 +6,8 @@ module DependencyGraph.Loaders (
   , findPyObject
   , locateModule
   , locateModules
+  , whichPath
+  , makeInits
   ) where
 
 import Control.Applicative
@@ -26,13 +28,43 @@ import System.FilePath
 -- class exists inside package: find package and do package
 ---------
 
+data PyModule = Pymodule { pymodule :: FilePath,
+                           modpath :: FilePath,
+                           inits :: [FilePath]
+                         } deriving (Show)
 
--- One of these imports may be one of three different things
--- This is unused for the moment, but perhaps can help with locateModule at bottom
-data PyImport = PyModule FilePath
-              | PyPackage FilePath
-              | PyObject FilePath
-              | NotFound
+
+isPrefixPath :: String -> String -> String
+isPrefixPath x y = if isPrefixOf y x then x else ""
+
+sortByLen :: [String] -> [String]
+sortByLen [] = []
+sortByLen (x:xs) = largerLengths ++ [x] ++ smallerLengths
+                   where
+                         largerLengths = sortByLen [g | g <- xs, not $ smaller g x]
+                         smallerLengths = sortByLen [h | h <- xs, smaller h x]
+                         smaller j y = length j < length y
+
+whichPath :: [FilePath] -> FilePath -> Maybe FilePath
+whichPath [] _ = Nothing
+whichPath xs y
+  | null sortedPrefixes = Nothing
+  | otherwise = Just $ head sortedPrefixes
+  where sortedPrefixes = sortByLen $ filter (/="") $ map (isPrefixPath y) xs
+
+notPath :: FilePath -> FilePath -> Bool
+notPath path = (/=) (dropTrailingPathSeparator path)
+
+-- We don't want our original mdpath so drop 1
+middleDirs :: FilePath -> FilePath -> [FilePath]
+middleDirs path mdpath = takeWhile (notPath path) (drop 1 $ iterate takeDirectory mdpath)
+
+addInit :: FilePath -> FilePath
+addInit fp = joinPath $ (addTrailingPathSeparator fp) : ["__init__.py"]
+
+-- make all inits between a PythonPath dir and the module's location
+makeInits :: FilePath -> FilePath -> [FilePath]
+makeInits path mdpath = (addInit path) : (map addInit $ middleDirs path (dropTrailingPathSeparator mdpath))
 
 -- This must be implemented somewhere, right?
 dropWhileM :: Monad m => (a -> m Bool) -> [a] -> m [a]
@@ -68,7 +100,7 @@ findFirstMatchingDir fp = do
   matches <- dropWhileM directoryDoesntExist $ (fp : splitDirs fp)
   case (null matches) of
     True -> return Nothing
-    False -> return $ Just $ matches !! 0
+    False -> return $ Just $ head matches
 
 -- Cartesian product of PythonPath dirs and one import directory's path.
 findPackage :: [FilePath] -> FilePath -> IO (Maybe FilePath)
@@ -81,7 +113,7 @@ findPackage pythonpath packpath = do
   case (null result) of
     True -> return Nothing
     False -> do
-      let package_init = result !! 0 ++ "/__init__.py"
+      let package_init = addInit $ head result
       bool <- doesFileExist package_init
       if bool then return $ Just package_init else return Nothing
 
@@ -132,6 +164,3 @@ locateModule pythonpath importpath = do
 
 locateModules :: [FilePath] -> [FilePath] -> IO [Maybe FilePath]
 locateModules fp1 fp2 = sequence $ locateModule fp1 <$> fp2
-
-locateInits :: [FilePath] -> FilePath -> IO [FilePath]
-locateInits = undefined

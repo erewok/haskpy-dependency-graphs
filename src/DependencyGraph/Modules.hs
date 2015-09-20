@@ -35,6 +35,7 @@ import qualified Text.ParserCombinators.Parsec as P
 data Environment = Environment { pyvers :: String,
                                  pythonpath :: [FilePath]
                                } deriving (Show)
+
 -- type Env r = ReaderT Environment (IO) r
 
 -- -- test reader env

@@ -6,36 +6,25 @@ module DependencyGraph.Loaders (
   , findPyObject
   , locateModule
   , locateModules
-  , whichPath
   , makeInits
+  , makeModule
+  , middleDirs
+  , whichPath
+  , findPrefixPath
   ) where
 
 import Control.Applicative
 import Control.Monad
 import Data.List
-import Data.List.Split
 import Data.Maybe
 import System.Directory
 import System.FilePath
 
----------
--- ANALYSIS --
-
--- Cases
--- Package exists: parse init
--- module exists: parse init of parents and package
--- class exists inside module: find module and do module
--- class exists inside package: find package and do package
----------
 
 data PyModule = Pymodule { pymodule :: FilePath,
-                           modpath :: FilePath,
-                           inits :: [FilePath]
+                           modpypath :: FilePath,
+                           pyinits :: [FilePath]
                          } deriving (Show)
-
-
-isPrefixPath :: String -> String -> String
-isPrefixPath x y = if isPrefixOf y x then x else ""
 
 sortByLen :: [String] -> [String]
 sortByLen [] = []
@@ -45,19 +34,32 @@ sortByLen (x:xs) = largerLengths ++ [x] ++ smallerLengths
                          smallerLengths = sortByLen [h | h <- xs, smaller h x]
                          smaller j y = length j < length y
 
+
+-- Could use pypath from reader env
+findPrefixPath :: [FilePath] -> FilePath -> FilePath
+findPrefixPath paths fp = let
+    sortedPaths = sortByLen paths
+    prefixTesters = isPrefixOf <$> sortedPaths
+    results = map ($ fp) prefixTesters
+    pathPositions = zip results [1..] :: [(Bool, Int)]
+    matches = filter fst pathPositions
+    result = if (not . null) matches then (snd . head) matches else -1
+    foundPath = if (result >= 0 && result < length paths) then paths !! result else ""
+  in foundPath
+
+-- Could use pypath from reader env
 whichPath :: [FilePath] -> FilePath -> Maybe FilePath
 whichPath [] _ = Nothing
-whichPath xs y
-  | null sortedPrefixes = Nothing
-  | otherwise = Just $ head sortedPrefixes
-  where sortedPrefixes = sortByLen $ filter (/="") $ map (isPrefixPath y) xs
+whichPath paths fp= if foundPath == "" then Nothing else Just foundPath
+  where foundPath = findPrefixPath paths fp
 
 notPath :: FilePath -> FilePath -> Bool
 notPath path = (/=) (dropTrailingPathSeparator path)
 
 -- We don't want our original mdpath so drop 1
 middleDirs :: FilePath -> FilePath -> [FilePath]
-middleDirs path mdpath = takeWhile (notPath path) (drop 1 $ iterate takeDirectory mdpath)
+middleDirs path mdpath = takeWhile (notPath path)
+                         (drop 1 $ iterate takeDirectory mdpath)
 
 addInit :: FilePath -> FilePath
 addInit fp = joinPath $ (addTrailingPathSeparator fp) : ["__init__.py"]
@@ -65,6 +67,16 @@ addInit fp = joinPath $ (addTrailingPathSeparator fp) : ["__init__.py"]
 -- make all inits between a PythonPath dir and the module's location
 makeInits :: FilePath -> FilePath -> [FilePath]
 makeInits path mdpath = (addInit path) : (map addInit $ middleDirs path (dropTrailingPathSeparator mdpath))
+
+
+-- Could use pypath from reader env
+makeModule :: [FilePath] -> FilePath -> Maybe PyModule
+makeModule ppath fp = do
+  solePath <- whichPath ppath fp
+  return Pymodule {pymodule = fp,
+                   modpypath = solePath,
+                   pyinits = makeInits solePath fp}
+
 
 -- This must be implemented somewhere, right?
 dropWhileM :: Monad m => (a -> m Bool) -> [a] -> m [a]
@@ -102,6 +114,8 @@ findFirstMatchingDir fp = do
     True -> return Nothing
     False -> return $ Just $ head matches
 
+
+-- Could use pypath from reader env
 -- Cartesian product of PythonPath dirs and one import directory's path.
 findPackage :: [FilePath] -> FilePath -> IO (Maybe FilePath)
 findPackage _ [] = return Nothing
@@ -117,6 +131,7 @@ findPackage pythonpath packpath = do
       bool <- doesFileExist package_init
       if bool then return $ Just package_init else return Nothing
 
+-- Could use pypath from reader env
 -- Cartesian product of PythonPath dirs and one import file's path.
 -- Return first matching, actual, existing file
 findModule :: [FilePath] -> FilePath -> IO (Maybe FilePath)
@@ -128,8 +143,9 @@ findModule pythonpath modpath = do
   result <- filterM doesFileExist combinations
   case (null result) of
     True -> return Nothing
-    False -> return $ Just $ result !! 0
+    False -> return $ Just $ head result
 
+-- Could use pypath from reader env
 -- Return FilePath (module) that exists and is part of object's FilePath
 -- Does not look for existence of Object inside module
 findPyObject :: [FilePath] -> FilePath -> IO (Maybe FilePath)
@@ -147,9 +163,10 @@ findPyObject pythonpath modpath
       found <- findModule pythonpath shortened
       return found
 
+-- Could use pypath from reader env
 locateModule :: [FilePath] -> FilePath -> IO (Maybe FilePath)
 locateModule [] _ = return Nothing
-locateModule xs [] = return $ Just $ xs !! 0
+locateModule xs [] = return $ Just $ head xs
 locateModule pythonpath importpath = do
   isModule <- findModule pythonpath importpath
   case isModule of

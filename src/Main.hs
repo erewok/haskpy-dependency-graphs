@@ -1,5 +1,6 @@
 module Main where
 
+import Control.Monad.Trans.Reader (runReaderT)
 import System.Environment
 import System.FilePath (splitSearchPath)
 

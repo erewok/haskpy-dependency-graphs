@@ -12,14 +12,14 @@ module DependencyGraph.Modules (
   , dotsToPath
   , initialImportPaths
   , findAllModules
+  , getPyVers
+  , getPyPath
+  , EnvT
   ) where
 
 import Control.Applicative
-import Control.Monad
-import Control.Monad.Trans
---import Control.Monad.Reader
+import Control.Monad (liftM)
 import Control.Monad.Trans.Reader
-import Control.Monad.IO.Class
 import Data.List
 import Data.List.Split
 import Data.Maybe
@@ -36,23 +36,18 @@ data Environment = Environment { pyvers :: String,
                                  pythonpath :: [FilePath]
                                } deriving (Show)
 
--- type Env r = ReaderT Environment (IO) r
-
--- -- test reader env
--- testreader = Environment "python3.4" testpythonpath
+type EnvT e = ReaderT Environment (IO) e
 
 
--- Tried and failed to put PythonPath and Python version into ReaderT: ToDo
--- getPyVers :: Env String
--- getPyVers = asks pyvers
---   -- env <- ask
---   -- return $ pyvers env
+getPyVers :: EnvT String
+getPyVers = do
+  pythonvers <- asks pyvers
+  return pythonvers
 
--- getPyPath :: Env [FilePath]
--- getPyPath = asks pythonpath
---             -- do
---   -- env <- ask
---   -- return $ pythonpath env
+getPyPath :: EnvT [FilePath]
+getPyPath = do
+  pypaths <- asks pythonpath
+  return pypaths
 
 
 -- FP Complete Provided the following

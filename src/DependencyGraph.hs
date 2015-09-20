@@ -10,6 +10,7 @@ module DependencyGraph (
   ) where
 
 import Control.Applicative
+import Control.Monad.Trans.Reader
 import Data.String.Utils
 import System.IO
 import Paths_dependency_graph
@@ -18,6 +19,12 @@ import DependencyGraph.GraphModules as Graphs
 import DependencyGraph.ImportLine as Imports
 import DependencyGraph.Modules as Modules
 import DependencyGraph.Loaders as Loaders
+
+
+-- rework to use readerT Environment ...
+startGraph' :: Environment -> FilePath -> EnvT [Node]
+startGraph' env infile = do
+  undefined
 
 startGraph :: Environment -> FilePath -> IO [Node]
 startGraph env infile = do

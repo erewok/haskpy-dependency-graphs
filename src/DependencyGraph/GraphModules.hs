@@ -81,7 +81,7 @@ makeNode :: IO FilePath -> M.EnvT Node
 makeNode infile = do
   file <- lift infile
   absfile <- lift (M.absolutize file)
-  simple_paths <- nub <$> M.findAllModulesE file
+  simple_paths <- nub <$> M.findAllModules file
   let nodeEdges = makeEdges absfile simple_paths
   return $ markVisited $ Node absfile simple_paths nodeEdges
 

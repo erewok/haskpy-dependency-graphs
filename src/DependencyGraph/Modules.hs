@@ -12,7 +12,6 @@ module DependencyGraph.Modules (
   , dotsToPath
   , initialImportPaths
   , findAllModules
-  , findAllModulesE
   , getPyVers
   , getPyPath
   , EnvT
@@ -131,37 +130,10 @@ getRealPaths = liftM catMaybes . sequence . fmap getRealPath
 relAbsPaths :: [FilePath] -> ([FilePath], [FilePath])
 relAbsPaths = partition (\fp -> head fp == '.')
 
-
-findAllModules :: Environment -> FilePath -> IO [FilePath]
-findAllModules env pyfile = do
-  doesFileExist pyfile >>= (\res ->
-                              case res of
-                                True ->findAllModules' env pyfile
-                                False -> return [])
-
--- File MUST exist
-findAllModules' :: Environment -> FilePath -> IO [FilePath]
-findAllModules' env pyfile = do
-  initial_imports <- initialImportPaths <$> pure pyfile
-  (rel_paths, abs_paths) <- liftM relAbsPaths initial_imports
-  let version = pyvers env
-  let ppath = pythonpath env
-  let python_path = L.filter3rdPartyStdLibPaths version ppath
-  let dirname = takeDirectory pyfile
-  modules <- catMaybes <$> L.locateModules python_path abs_paths
-
-  initialdir <- getCurrentDirectory
-  -- absoluteAllRels needs to be in the proper dir to locate rel paths
-  setCurrentDirectory dirname
-  other_modules <- getRealPaths <$> absoluteAllRels rel_paths
-  setCurrentDirectory initialdir
-  (++) modules <$> other_modules
-
-
 -- USING readerT Environment
 -- File MUST exist
-findAllModules'' :: FilePath -> EnvT [FilePath]
-findAllModules'' pyfile = do
+findAllModules' :: FilePath -> EnvT [FilePath]
+findAllModules' pyfile = do
   initial_imports <- initialImportPaths <$> pure pyfile
   (rel_paths, abs_paths) <- lift (liftM relAbsPaths initial_imports)
   version <- getPyVers
@@ -177,9 +149,9 @@ findAllModules'' pyfile = do
   lift $ setCurrentDirectory initialdir
   (++) modules <$> lift other_modules
 
-findAllModulesE :: FilePath -> EnvT [FilePath]
-findAllModulesE pyfile = do
+findAllModules :: FilePath -> EnvT [FilePath]
+findAllModules pyfile = do
   lift (doesFileExist pyfile) >>= (\res ->
                                      case res of
-                                       True ->findAllModules'' pyfile
+                                       True ->findAllModules' pyfile
                                        False -> return [])

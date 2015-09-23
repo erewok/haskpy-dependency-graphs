@@ -4,32 +4,23 @@ module DependencyGraph (
   , module Modules
   , module Loaders
   , startGraph
+  , displayGraph
   , printableNode
   , printGraph
-  , displayGraph
   ) where
 
 import Control.Applicative
-import Control.Monad.Trans.Reader
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Trans.Reader (runReaderT)
 import Data.String.Utils
 import System.IO
+import Control.Monad.Trans (lift)
 import Paths_dependency_graph
 
 import DependencyGraph.GraphModules as Graphs
 import DependencyGraph.ImportLine as Imports
 import DependencyGraph.Modules as Modules
 import DependencyGraph.Loaders as Loaders
-
-
--- rework to use readerT Environment ...
-startGraph' :: Environment -> FilePath -> EnvT [Node]
-startGraph' env infile = do
-  undefined
-
-startGraph :: Environment -> FilePath -> IO [Node]
-startGraph env infile = do
-  firstNode <- makeNode env (pure infile)
-  generateGraph env (pure [firstNode])
 
 
 printEdge :: (String, String) -> String
@@ -53,11 +44,17 @@ sub = "//### EDGES ###//\n"
 edgeToLink :: (String, String) -> String
 edgeToLink (a, b) = "{source: \"" ++ a ++ "\", target: \"" ++ b ++ "\", type: \"direct\"},\n"
 
-displayGraph :: IO [Node] -> IO ()
+-- rework to use readerT Environment ...
+startGraph :: FilePath -> EnvT [Node]
+startGraph infile = do
+  firstNode <- makeNode (pure infile)
+  generateGraph (pure [firstNode])
+
+
+displayGraph :: [Node] -> IO String
 displayGraph nods = do
   template <- getDataFileName "html/index.html"
   content <- readFile template
-  let all_edges = concat <$> filter (not . null) <$> map edges <$> nods
-  links <- concatMap edgeToLink <$> all_edges
-  let index = replace sub links content
-  putStrLn index
+  let all_edges = (concat . filter (not . null)) $ map edges nods
+  let links = concatMap edgeToLink all_edges
+  replace sub <$> pure links <*> pure content

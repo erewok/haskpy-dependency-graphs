@@ -12,6 +12,7 @@ module DependencyGraph.Modules (
   , dotsToPath
   , initialImportPaths
   , findAllModules
+  , findAllModulesE
   , getPyVers
   , getPyPath
   , EnvT
@@ -19,6 +20,7 @@ module DependencyGraph.Modules (
 
 import Control.Applicative
 import Control.Monad (liftM)
+import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Reader
 import Data.List
 import Data.List.Split
@@ -154,3 +156,30 @@ findAllModules' env pyfile = do
   other_modules <- getRealPaths <$> absoluteAllRels rel_paths
   setCurrentDirectory initialdir
   (++) modules <$> other_modules
+
+
+-- USING readerT Environment
+-- File MUST exist
+findAllModules'' :: FilePath -> EnvT [FilePath]
+findAllModules'' pyfile = do
+  initial_imports <- initialImportPaths <$> pure pyfile
+  (rel_paths, abs_paths) <- lift (liftM relAbsPaths initial_imports)
+  version <- getPyVers
+  ppath <- getPyPath
+  let python_path = L.filter3rdPartyStdLibPaths version ppath
+  let dirname = takeDirectory pyfile
+  modules <- catMaybes <$> lift (L.locateModules python_path abs_paths)
+
+  initialdir <- lift getCurrentDirectory
+  -- absoluteAllRels needs to be in the proper dir to locate rel paths
+  lift $ setCurrentDirectory dirname
+  other_modules <- getRealPaths <$> lift (absoluteAllRels rel_paths)
+  lift $ setCurrentDirectory initialdir
+  (++) modules <$> lift other_modules
+
+findAllModulesE :: FilePath -> EnvT [FilePath]
+findAllModulesE pyfile = do
+  lift (doesFileExist pyfile) >>= (\res ->
+                                     case res of
+                                       True ->findAllModules'' pyfile
+                                       False -> return [])

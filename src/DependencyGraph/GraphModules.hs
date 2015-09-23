@@ -16,11 +16,9 @@ module DependencyGraph.GraphModules (
   ) where
 
 import Control.Applicative
-import Control.Monad
-import Control.Monad.IO.Class
+import Control.Monad.Trans (lift)
 import Data.List
 import qualified DependencyGraph.Modules as M
-import qualified DependencyGraph.Loaders as L
 
 
 data Node = Node { node :: FilePath
@@ -70,35 +68,34 @@ allNodesVisited = and . map nodeVisited
 unvisitedNodes :: [Node] -> [Node]
 unvisitedNodes = filter (not . nodeVisited)
 
-visitAllNodes :: M.Environment -> IO [Node] -> IO [Node]
-visitAllNodes env nds = do
-  allnodes <- nds
-  let visitednodes = filter nodeVisited allnodes
-  let mustvisit = map node $ unvisitedNodes allnodes
-  newlyvisited <- sequence $ (makeNode env) <$> (map return mustvisit)
-  return $ visitednodes ++ newlyvisited
-
 makeEdges :: Functor f => FilePath -> f FilePath -> f (FilePath, FilePath)
 makeEdges infile fps = (,) infile <$> fps
 
 stop :: [Node] -> Bool
 stop nds = allNodesVisited nds && (null $ undiscoveredNodes nds)
 
-makeNode :: M.Environment -> IO FilePath -> IO Node
-makeNode env infile = do
-  file <- infile
-  absfile <- M.absolutize file
-  simple_paths <- nub <$> M.findAllModules env file
+
+-- USING readerT Environment
+--
+makeNode :: IO FilePath -> M.EnvT Node
+makeNode infile = do
+  file <- lift infile
+  absfile <- lift (M.absolutize file)
+  simple_paths <- nub <$> M.findAllModulesE file
   let nodeEdges = makeEdges absfile simple_paths
   return $ markVisited $ Node absfile simple_paths nodeEdges
 
-generateGraph :: M.Environment -> IO [Node] -> IO [Node]
-generateGraph env nds = do
+visitAllNodes :: M.EnvT [Node] -> M.EnvT [Node]
+visitAllNodes nds = do
+  allnodes <- nds
+  let visitednodes = filter nodeVisited allnodes
+  let mustvisit = node <$> unvisitedNodes allnodes
+  let newlyvisited = makeNode <$> map return mustvisit
+  (++) <$> return visitednodes <*> sequence newlyvisited
+
+generateGraph :: M.EnvT [Node] -> M.EnvT [Node]
+generateGraph nds = do
   continue <- stop <$> nds
   case continue of
     True -> nds
-    False -> generateGraph env $ visitAllNodes env (discoverAllNodes <$> nds)
-
-
-addInits :: M.Environment -> IO FilePath -> IO [FilePath]
-addInits = undefined
+    False -> generateGraph $ visitAllNodes (discoverAllNodes <$> nds)

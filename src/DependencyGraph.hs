@@ -10,11 +10,8 @@ module DependencyGraph (
   ) where
 
 import Control.Applicative
-import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Trans.Reader (runReaderT)
 import Data.String.Utils
 import System.IO
-import Control.Monad.Trans (lift)
 import Paths_dependency_graph
 
 import DependencyGraph.GraphModules as Graphs
@@ -47,8 +44,8 @@ edgeToLink (a, b) = "{source: \"" ++ a ++ "\", target: \"" ++ b ++ "\", type: \"
 -- rework to use readerT Environment ...
 startGraph :: FilePath -> EnvT [Node]
 startGraph infile = do
-  firstNode <- makeNode (pure infile)
-  generateGraph (pure [firstNode])
+  firstNode <- makeNode' (pure infile)
+  generateGraph' (pure [firstNode])
 
 
 displayGraph :: [Node] -> IO String

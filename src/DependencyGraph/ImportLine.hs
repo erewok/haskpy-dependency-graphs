@@ -25,7 +25,6 @@ module DependencyGraph.ImportLine (
 
 import Control.Applicative
 import Data.Monoid
-import Data.String
 
 import qualified Text.ParserCombinators.Parsec as P hiding ((<|>))
 

@@ -2,9 +2,10 @@ module DependencyGraph.GraphModules (
   Node(..)
   , makeEdges
   , makeNode
+  , makeNode'
   , discoverAllNodes
-  , visitAllNodes
   , generateGraph
+  , generateGraph'
   , stop
   , undiscoveredNodes
   , allNodesVisited
@@ -18,6 +19,7 @@ module DependencyGraph.GraphModules (
 import Control.Applicative
 import Control.Monad.Trans (lift)
 import Data.List
+import qualified DependencyGraph.Loaders as L
 import qualified DependencyGraph.Modules as M
 
 
@@ -32,12 +34,12 @@ data Node = Node { node :: FilePath
 -- where ... may be an empty list or a list of FilePaths
 
 nodeDiscovered :: [Node] -> FilePath -> Bool
-nodeDiscovered nodeset fp = fp `elem` (map node nodeset)
+nodeDiscovered nodeset fp = fp `elem` map node nodeset
 
 undiscoveredNodes :: [Node] -> [FilePath]
 undiscoveredNodes nds = nub $ filter todiscover $ concatMap nodes nds
-                        where todiscover = \fp -> ((not . nodeDiscovered nds) fp)
-                                                   && (fp /= "$")
+                        where todiscover fp = (not . nodeDiscovered nds) fp
+                                              && (fp /= "$")
 
 makeDiscoveredNode :: FilePath -> Node
 makeDiscoveredNode fp = Node fp [] []
@@ -63,7 +65,7 @@ nodeVisited :: Node -> Bool
 nodeVisited = visited . nodes
 
 allNodesVisited :: [Node] -> Bool
-allNodesVisited = and . map nodeVisited
+allNodesVisited = all nodeVisited
 
 unvisitedNodes :: [Node] -> [Node]
 unvisitedNodes = filter (not . nodeVisited)
@@ -72,7 +74,7 @@ makeEdges :: Functor f => FilePath -> f FilePath -> f (FilePath, FilePath)
 makeEdges infile fps = (,) infile <$> fps
 
 stop :: [Node] -> Bool
-stop nds = allNodesVisited nds && (null $ undiscoveredNodes nds)
+stop nds = allNodesVisited nds && null (undiscoveredNodes nds)
 
 
 -- USING readerT Environment
@@ -99,3 +101,29 @@ generateGraph nds = do
   case continue of
     True -> nds
     False -> generateGraph $ visitAllNodes (discoverAllNodes <$> nds)
+
+
+makeNode' :: IO FilePath -> M.EnvT Node
+makeNode' infile = do
+  file <- lift infile
+  absfile <- lift (M.absolutize file)
+  simple_paths <-  M.findAllModules'' file
+  let pymodule_paths = (++) (nub $ concatMap L.pyinits simple_paths)
+                            (nub $ map L.pymodule simple_paths)
+  let nodeEdges = makeEdges absfile pymodule_paths
+  return $ markVisited $ Node absfile pymodule_paths nodeEdges
+
+visitAllNodes' :: M.EnvT [Node] -> M.EnvT [Node]
+visitAllNodes' nds = do
+  allnodes <- nds
+  let visitednodes = filter nodeVisited allnodes
+  let mustvisit = node <$> unvisitedNodes allnodes
+  let newlyvisited = makeNode' <$> map return mustvisit
+  (++) <$> return visitednodes <*> sequence newlyvisited
+
+generateGraph' :: M.EnvT [Node] -> M.EnvT [Node]
+generateGraph' nds = do
+  continue <- stop <$> nds
+  case continue of
+    True -> nds
+    False -> generateGraph' $ visitAllNodes' (discoverAllNodes <$> nds)

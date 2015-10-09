@@ -12,6 +12,7 @@ module DependencyGraph.Modules (
   , dotsToPath
   , initialImportPaths
   , findAllModules
+  , findAllModules''
   , getPyVers
   , getPyPath
   , EnvT
@@ -155,3 +156,23 @@ findAllModules pyfile = do
                                      case res of
                                        True ->findAllModules' pyfile
                                        False -> return [])
+
+
+findAllModules'' :: FilePath -> EnvT [L.PyModule]
+findAllModules'' pyfile = do
+  initial_imports <- initialImportPaths <$> pure pyfile
+  (rel_paths, abs_paths) <- lift (liftM relAbsPaths initial_imports)
+  version <- getPyVers
+  ppath <- getPyPath
+  let python_path = L.filter3rdPartyStdLibPaths version ppath
+  let dirname = takeDirectory pyfile
+  modules <- lift (L.locateModules' python_path abs_paths)
+
+  initialdir <- lift getCurrentDirectory
+  -- absoluteAllRels needs to be in the proper dir to locate rel paths
+  lift $ setCurrentDirectory dirname
+  absolute_modules <- getRealPaths <$> lift (absoluteAllRels rel_paths)
+  result <- fmap (L.makeModule python_path) <$> lift absolute_modules
+  let butter = lift $ catMaybes <$> sequence result
+  lift $ setCurrentDirectory initialdir
+  (++) modules <$> butter

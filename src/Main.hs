@@ -1,8 +1,6 @@
 module Main where
 
-import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Trans (lift)
-import Control.Monad.Trans.Reader (reader, runReaderT)
+import Control.Monad.Trans.Reader (runReaderT)
 import System.Environment
 import System.FilePath (splitSearchPath)
 

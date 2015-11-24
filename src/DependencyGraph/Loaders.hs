@@ -64,8 +64,11 @@ addInit fp = joinPath $ addTrailingPathSeparator fp : ["__init__.py"]
 
 -- make all inits between a PythonPath dir and the module's location
 makeInits :: FilePath -> FilePath -> [FilePath]
-makeInits path mdpath = (:) (addInit path)
-                        (map addInit $ middleDirs path (dropTrailingPathSeparator mdpath))
+makeInits path mdpath = (:) (addInit path) addedInits
+                        where addedInits = map addInit middleDirectories
+                              middleDirectories = middleDirs droppath dropmdpath
+                              droppath = dropTrailingPathSeparator mdpath
+                              dropmdpath = dropTrailingPathSeparator path
 
 makeModule :: PythonPaths -> FilePath -> IO (Maybe PyModule')
 makeModule ppath fp = do

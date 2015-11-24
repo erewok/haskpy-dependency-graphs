@@ -75,6 +75,7 @@ stop :: [Node] -> Bool
 stop nds = allNodesVisited nds && null (undiscoveredNodes nds)
 
 
+
 -- USING readerT Environment
 --
 makeNode :: IO FilePath -> M.EnvT Node
@@ -82,8 +83,9 @@ makeNode infile = do
   file <- lift infile
   absfile <- lift (M.absolutize file)
   simple_paths <-  M.findAllModules file
-  let pymodule_paths = (++) (nub $ concatMap L.pyinits simple_paths)
-                            (nub $ map L.pymodule simple_paths)
+  let all_inits = filter (/= absfile) $ nub $ concatMap L.pyinits simple_paths
+  let modpaths = nub $ map L.pymodule simple_paths
+  let pymodule_paths = (++) all_inits modpaths
   let nodeEdges = makeEdges absfile pymodule_paths
   return $ markVisited $ Node absfile pymodule_paths nodeEdges
 

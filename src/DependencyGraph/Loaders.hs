@@ -72,9 +72,11 @@ makeModule ppath fp = do
   let solePath = findPrefixPath ppath fp
   case solePath of
     Nothing -> return Nothing
-    Just path -> return $ Just Pymodule {pymodule = fp,
-                                         modpypath = path,
-                                         pyinits = makeInits path fp}
+    Just path -> do
+      initmods <- filterM doesFileExist (makeInits path fp)
+      return $ Just Pymodule {pymodule = fp,
+                              modpypath = path,
+                              pyinits = initmods}
 
 
 -- This must be implemented somewhere, right?

@@ -2,7 +2,7 @@ module DependencyGraph.Loaders (
   filter3rdPartyStdLibPaths
   , pyFile
   , PythonPaths
-  , PyModule(..)
+  , PyModule'(..)
   , findPackage
   , findModule
   , findPyObject
@@ -16,19 +16,17 @@ module DependencyGraph.Loaders (
   , findPrefixPath
   ) where
 
-import Control.Applicative
 import Control.Monad
-import Control.Monad.IO.Class (liftIO)
 import Data.List
 import Data.Maybe
 import System.Directory
 import System.FilePath
 
 
-data PyModule = Pymodule { pymodule :: FilePath,
-                           modpypath :: FilePath,
-                           pyinits :: [FilePath]
-                         }
+data PyModule' = Pymodule { pymodule :: !FilePath,
+                           modpypath :: !FilePath,
+                           pyinits :: ![FilePath]
+                         } deriving (Show, Eq)
 
 type PythonPaths = [FilePath]
 
@@ -42,7 +40,6 @@ sortByLen (x:xs) = largerLengths ++ [x] ++ smallerLengths
                          smaller j y = length j < length y
 
 
--- Could use pypath from reader env
 findPrefixPath :: PythonPaths -> FilePath -> FilePath
 findPrefixPath paths fp = let
     sortedPaths = sortByLen paths
@@ -54,7 +51,6 @@ findPrefixPath paths fp = let
     foundPath = if result >= 0 && result < length paths then paths !! result else ""
   in foundPath
 
--- Could use pypath from reader env
 whichPath :: PythonPaths -> FilePath -> Maybe FilePath
 whichPath [] _ = Nothing
 whichPath paths fp = if foundPath == "" then Nothing else Just foundPath
@@ -69,14 +65,14 @@ middleDirs path mdpath = takeWhile (notPath path)
                          (drop 1 $ iterate takeDirectory mdpath)
 
 addInit :: FilePath -> FilePath
-addInit fp = joinPath $ (addTrailingPathSeparator fp) : ["__init__.py"]
+addInit fp = joinPath $ addTrailingPathSeparator fp : ["__init__.py"]
 
 -- make all inits between a PythonPath dir and the module's location
 makeInits :: FilePath -> FilePath -> [FilePath]
 makeInits path mdpath = (:) (addInit path)
                         (map addInit $ middleDirs path (dropTrailingPathSeparator mdpath))
 
-makeModule :: PythonPaths -> FilePath -> IO (Maybe PyModule)
+makeModule :: PythonPaths -> FilePath -> IO (Maybe PyModule')
 makeModule ppath fp = do
   let solePath = whichPath ppath fp
   case solePath of
@@ -187,7 +183,7 @@ locateModule pythonpath importpath = do
 locateModules :: PythonPaths -> [FilePath] -> IO [Maybe FilePath]
 locateModules fp1 fp2 = sequence $ locateModule fp1 <$> fp2
 
-locateModules' :: PythonPaths -> [FilePath] -> IO [PyModule]
+locateModules' :: PythonPaths -> [FilePath] -> IO [PyModule']
 locateModules' fp1 fp2 = do
   maybePaths <- sequence $ locateModule fp1 <$> fp2
   let maybeModules = catMaybes maybePaths

@@ -7,12 +7,13 @@
 module DependencyGraph.Modules (
   Environment(..)
   , getImports
+  , getAllImports
   , absolutize
   , getPath
   , dotsToPath
   , initialImportPaths
   , findAllModules
-  , findAllModules''
+  , findAllModules'
   , getPyVers
   , getPyPath
   , EnvT
@@ -38,18 +39,14 @@ data Environment = Environment { pyvers :: String,
                                  pythonpath :: [FilePath]
                                } deriving (Show)
 
-type EnvT e = ReaderT Environment (IO) e
+type EnvT e = ReaderT Environment IO e
 
 
 getPyVers :: EnvT String
-getPyVers = do
-  pythonvers <- asks pyvers
-  return pythonvers
+getPyVers = asks pyvers
 
 getPyPath :: EnvT [FilePath]
-getPyPath = do
-  pypaths <- asks pythonpath
-  return pypaths
+getPyPath = asks pythonpath
 
 
 -- FP Complete Provided the following
@@ -64,7 +61,7 @@ absolutize aPath
         return $ fromJust $ guess_dotdot pathMaybeWithDots
 
 absoluteAllRels :: [FilePath] -> IO [FilePath]
-absoluteAllRels = sequence . map absolutize
+absoluteAllRels = mapM absolutize
 
 cleanResults :: I.Importer -> Bool
 cleanResults (I.ImportModule []) = False
@@ -131,35 +128,36 @@ getRealPaths = liftM catMaybes . sequence . fmap getRealPath
 relAbsPaths :: [FilePath] -> ([FilePath], [FilePath])
 relAbsPaths = partition (\fp -> head fp == '.')
 
--- USING readerT Environment
--- File MUST exist
-findAllModules' :: FilePath -> EnvT [FilePath]
-findAllModules' pyfile = do
+
+getAllImports :: FilePath -> EnvT [FilePath]
+getAllImports pyfile = do
   initial_imports <- initialImportPaths <$> pure pyfile
   (rel_paths, abs_paths) <- lift (liftM relAbsPaths initial_imports)
   version <- getPyVers
   ppath <- getPyPath
   let python_path = L.filter3rdPartyStdLibPaths version ppath
   let dirname = takeDirectory pyfile
-  modules <- catMaybes <$> lift (L.locateModules python_path abs_paths)
+  absolute_modules <- lift $ L.locateModules python_path abs_paths
+  let modules = catMaybes absolute_modules
 
   initialdir <- lift getCurrentDirectory
   -- absoluteAllRels needs to be in the proper dir to locate rel paths
   lift $ setCurrentDirectory dirname
-  other_modules <- getRealPaths <$> lift (absoluteAllRels rel_paths)
+  absoluted_modules <- getRealPaths <$> lift (absoluteAllRels rel_paths)
   lift $ setCurrentDirectory initialdir
-  (++) modules <$> lift other_modules
-
-findAllModules :: FilePath -> EnvT [FilePath]
-findAllModules pyfile = do
-  lift (doesFileExist pyfile) >>= (\res ->
-                                     case res of
-                                       True ->findAllModules' pyfile
-                                       False -> return [])
+  (++) modules <$> lift absoluted_modules
 
 
-findAllModules'' :: FilePath -> EnvT [L.PyModule]
-findAllModules'' pyfile = do
+-- USING readerT Environment
+-- File MUST exist
+findAllModules :: FilePath -> EnvT [L.PyModule']
+findAllModules pyfile = lift (doesFileExist pyfile) >>= (\res ->
+                                                           case res of
+                                                           True -> findAllModules' pyfile
+                                                           False -> return [])
+
+findAllModules' :: FilePath -> EnvT [L.PyModule']
+findAllModules' pyfile = do
   initial_imports <- initialImportPaths <$> pure pyfile
   (rel_paths, abs_paths) <- lift (liftM relAbsPaths initial_imports)
   version <- getPyVers

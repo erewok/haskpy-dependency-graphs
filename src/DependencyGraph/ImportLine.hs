@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 -- What is an import line?
 -- it's a line of spaces, text, and periods
 -- it might also have a continuation '\' + '\n' or  '(' + '\n'

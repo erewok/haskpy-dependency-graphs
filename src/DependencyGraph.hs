@@ -44,8 +44,8 @@ edgeToLink (a, b) = "{source: \"" ++ a ++ "\", target: \"" ++ b ++ "\", type: \"
 -- rework to use readerT Environment ...
 startGraph :: FilePath -> EnvT [Node]
 startGraph infile = do
-  firstNode <- makeNode' (pure infile)
-  generateGraph' (pure [firstNode])
+  firstNode <- makeNode (pure infile)
+  generateGraph (pure [firstNode])
 
 
 displayGraph :: [Node] -> IO String

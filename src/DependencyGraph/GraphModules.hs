@@ -2,10 +2,8 @@ module DependencyGraph.GraphModules (
   Node(..)
   , makeEdges
   , makeNode
-  , makeNode'
   , discoverAllNodes
   , generateGraph
-  , generateGraph'
   , stop
   , undiscoveredNodes
   , allNodesVisited
@@ -83,9 +81,11 @@ makeNode :: IO FilePath -> M.EnvT Node
 makeNode infile = do
   file <- lift infile
   absfile <- lift (M.absolutize file)
-  simple_paths <- nub <$> M.findAllModules file
-  let nodeEdges = makeEdges absfile simple_paths
-  return $ markVisited $ Node absfile simple_paths nodeEdges
+  simple_paths <-  M.findAllModules file
+  let pymodule_paths = (++) (nub $ concatMap L.pyinits simple_paths)
+                            (nub $ map L.pymodule simple_paths)
+  let nodeEdges = makeEdges absfile pymodule_paths
+  return $ markVisited $ Node absfile pymodule_paths nodeEdges
 
 visitAllNodes :: M.EnvT [Node] -> M.EnvT [Node]
 visitAllNodes nds = do
@@ -101,29 +101,3 @@ generateGraph nds = do
   case continue of
     True -> nds
     False -> generateGraph $ visitAllNodes (discoverAllNodes <$> nds)
-
-
-makeNode' :: IO FilePath -> M.EnvT Node
-makeNode' infile = do
-  file <- lift infile
-  absfile <- lift (M.absolutize file)
-  simple_paths <-  M.findAllModules'' file
-  let pymodule_paths = (++) (nub $ concatMap L.pyinits simple_paths)
-                            (nub $ map L.pymodule simple_paths)
-  let nodeEdges = makeEdges absfile pymodule_paths
-  return $ markVisited $ Node absfile pymodule_paths nodeEdges
-
-visitAllNodes' :: M.EnvT [Node] -> M.EnvT [Node]
-visitAllNodes' nds = do
-  allnodes <- nds
-  let visitednodes = filter nodeVisited allnodes
-  let mustvisit = node <$> unvisitedNodes allnodes
-  let newlyvisited = makeNode' <$> map return mustvisit
-  (++) <$> return visitednodes <*> sequence newlyvisited
-
-generateGraph' :: M.EnvT [Node] -> M.EnvT [Node]
-generateGraph' nds = do
-  continue <- stop <$> nds
-  case continue of
-    True -> nds
-    False -> generateGraph' $ visitAllNodes' (discoverAllNodes <$> nds)

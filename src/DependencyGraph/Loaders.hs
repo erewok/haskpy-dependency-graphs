@@ -12,7 +12,6 @@ module DependencyGraph.Loaders (
   , makeInits
   , makeModule
   , middleDirs
-  , whichPath
   , findPrefixPath
   ) where
 
@@ -40,7 +39,7 @@ sortByLen (x:xs) = largerLengths ++ [x] ++ smallerLengths
                          smaller j y = length j < length y
 
 
-findPrefixPath :: PythonPaths -> FilePath -> FilePath
+findPrefixPath :: PythonPaths -> FilePath -> Maybe FilePath
 findPrefixPath paths fp = let
     sortedPaths = sortByLen paths
     prefixTesters = isPrefixOf <$> sortedPaths
@@ -48,13 +47,9 @@ findPrefixPath paths fp = let
     pathPositions = zip results [1..] :: [(Bool, Int)]
     matches = filter fst pathPositions
     result = if (not . null) matches then (snd . head) matches else -1
-    foundPath = if result >= 0 && result < length paths then paths !! result else ""
+    foundPath = if result >= 0 && result < length paths then Just $ paths !! result else Nothing
   in foundPath
 
-whichPath :: PythonPaths -> FilePath -> Maybe FilePath
-whichPath [] _ = Nothing
-whichPath paths fp = if foundPath == "" then Nothing else Just foundPath
-  where foundPath = findPrefixPath paths fp
 
 notPath :: FilePath -> FilePath -> Bool
 notPath path = (/=) (dropTrailingPathSeparator path)
@@ -74,7 +69,7 @@ makeInits path mdpath = (:) (addInit path)
 
 makeModule :: PythonPaths -> FilePath -> IO (Maybe PyModule')
 makeModule ppath fp = do
-  let solePath = whichPath ppath fp
+  let solePath = findPrefixPath ppath fp
   case solePath of
     Nothing -> return Nothing
     Just path -> return $ Just Pymodule {pymodule = fp,

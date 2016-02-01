@@ -7,6 +7,7 @@ dist
 *.tag
 *~
 .hsenv
+.dir-locals.el
 /.cabal-sandbox/
 /target/
 TAGS

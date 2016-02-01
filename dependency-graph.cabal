@@ -67,6 +67,11 @@ executable pydepencies
                     , text
                     , MissingH
                     , filepath
+                    , lens
+                    , conduit
+                    , conduit-combinators
+                    , resourcet
+                    , vector
   other-modules:    Paths_dependency_graph
 
   ghc-options:        -Wall
@@ -86,6 +91,7 @@ executable pydepencies
                       DependencyGraph.ImportLine
                       DependencyGraph.Modules
                       DependencyGraph.Loaders
+                      DependencyGraph.Packages
 
   main-is:            Main.hs
 

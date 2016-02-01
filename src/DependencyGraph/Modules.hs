@@ -8,6 +8,9 @@ module DependencyGraph.Modules (
   Environment(..)
   , getImports
   , getAllImports
+  , getRealPaths
+  , absoluteAllRels
+  , relAbsPaths
   , absolutize
   , getPath
   , dotsToPath
@@ -169,8 +172,9 @@ findAllModules' pyfile = do
   initialdir <- lift getCurrentDirectory
   -- absoluteAllRels needs to be in the proper dir to locate rel paths
   lift $ setCurrentDirectory dirname
-  absolute_modules <- getRealPaths <$> lift (absoluteAllRels rel_paths)
-  result <- fmap (L.makeModule python_path) <$> lift absolute_modules
+  absolute_modules <- lift (absoluteAllRels rel_paths)
+  fixed_absolute <- liftM getRealPaths (pure absolute_modules)
+  result <- fmap (L.makeModule python_path) <$> lift fixed_absolute
   let butter = lift $ catMaybes <$> sequence result
   lift $ setCurrentDirectory initialdir
   (++) modules <$> butter

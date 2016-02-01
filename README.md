@@ -25,7 +25,7 @@ Note that normally nodes in the source will include full OS file paths.
 
 * ~~Only works on relative paths for the moment!~~
 
-* Nothing from any `__init__.py` module is being examined!
+* ~~Nothing from any `__init__.py` module is being examined!~~
 
 * Graphs do not mark cycles, ~~or direction of edges.~~
 

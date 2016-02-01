@@ -64,8 +64,7 @@ addInit fp = joinPath $ addTrailingPathSeparator fp : ["__init__.py"]
 
 -- make all inits between a PythonPath dir and the module's location
 makeInits :: FilePath -> FilePath -> [FilePath]
-makeInits path mdpath = (:) (addInit path)
-                        (map addInit $ middleDirs path (dropTrailingPathSeparator mdpath))
+makeInits path mdpath = map addInit $ middleDirs path (dropTrailingPathSeparator mdpath)
 
 makeModule :: PythonPaths -> FilePath -> IO (Maybe PyModule')
 makeModule ppath fp = do
@@ -142,25 +141,28 @@ findModule pythonpath modpath = do
   let prepped_paths = map addTrailingPathSeparator pythonpath
   let combinations = (++) <$> prepped_paths <*> [modpath]
   result <- filterM doesFileExist combinations
-  case (null result) of
-    True -> return Nothing
-    False -> return $ Just $ head result
+  if null result
+    then return Nothing
+    else return $ Just $ head result
+
+truncatePath :: FilePath -> FilePath
+truncatePath = pyFile . dropTrailingPathSeparator . joinPath . init . splitPath
 
 -- Could use pypath from reader env
 -- Return FilePath (module) that exists and is part of object's FilePath
 -- Does not look for existence of Object inside module
 findPyObject :: PythonPaths -> FilePath -> IO (Maybe FilePath)
--- findPyObject [] _ = return Nothing
 findPyObject _ [] = return Nothing
+findPyObject _ ".py" = return Nothing
 findPyObject pythonpath modpath
   | (length $ splitPath modpath) > 1 = do
-      let shortened = pyFile $ (joinPath . init . splitPath) modpath
+      let shortened = truncatePath modpath
       isfound <- findModule pythonpath shortened
       case isfound of
         Nothing -> findPyObject pythonpath shortened
         (Just a) -> return $ Just a
   | otherwise = do
-      let shortened = pyFile $ (joinPath . init . splitPath) modpath
+      let shortened = truncatePath modpath
       findModule pythonpath shortened
 
 -- Could use pypath from reader env
